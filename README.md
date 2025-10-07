@@ -6,7 +6,7 @@
 > *"Very Large-scale Multi-Robot Task Allocation in Challenging Environments via Robot Redistribution"*,  
 > Robotics and Autonomous Systems (RAS), Dec 2025.  
 > 🔗 [View Paper](https://authors.elsevier.com/tracking/article/details.do?aid=105126&jid=ROBOT&surname=Nam)
-
+> If you use this code in academic work, please cite the paper above.
 
 > Visibility-based roadmap + section-level allocation for scalable multi-robot task assignment.  
 > Cleanly refactored modules, file-based map I/O (JSON/YAML), and reproducible runs.
@@ -159,13 +159,6 @@ Typical run produces:
 
 ---
 
-## Paper
-Elsevier (Robotics and Autonomous Systems):  
-🔗 https://authors.elsevier.com/tracking/article/details.do?aid=105126&jid=ROBOT&surname=Nam
-
-> If you use this code in academic work, please cite the paper above.
-
----
 
 ## Contributing
 - Open issues for bugs/features  
