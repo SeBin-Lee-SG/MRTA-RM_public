@@ -4,7 +4,7 @@
 
 > **Seabin Lee, Joonyeol Sim, and Changjoo Nam**,  
 > *"Very Large-scale Multi-Robot Task Allocation in Challenging Environments via Robot Redistribution"*,  
-> Robotics and Autonomous Systems (RAS), Dec 2025. 🔗 [View Paper](https://authors.elsevier.com/tracking/article/details.do?aid=105126&jid=ROBOT&surname=Nam)  
+> Robotics and Autonomous Systems (RAS), Dec 2025. 🔗 [View Paper](https://authors.elsevier.com/tracking/article/details.do?aid=105126&jid=ROBOT&surname=Nam) 🎬 [Demo Video](https://youtu.be/tSPjUtrzA-I?si=UIpyX2zHNFKPx2aw)  
 > *If you use this code in academic work, please cite the paper above.*
 
 > Visibility-based roadmap + section-level allocation for scalable multi-robot task assignment.  
