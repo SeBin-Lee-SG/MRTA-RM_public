@@ -1,5 +1,13 @@
 # MRTA-RM — Multi-Robot Task Allocation via Robot Redistribution Mechanism
 
+> 📄 This repository contains the official code for the following paper:
+
+> **Seabin Lee, Joonyeol Sim, and Changjoo Nam**,  
+> *"Very Large-scale Multi-Robot Task Allocation in Challenging Environments via Robot Redistribution"*,  
+> Robotics and Autonomous Systems (RAS), Dec 2025.  
+> 🔗 [View Paper](https://authors.elsevier.com/tracking/article/details.do?aid=105126&jid=ROBOT&surname=Nam)
+
+
 > Visibility-based roadmap + section-level allocation for scalable multi-robot task assignment.  
 > Cleanly refactored modules, file-based map I/O (JSON/YAML), and reproducible runs.
 
