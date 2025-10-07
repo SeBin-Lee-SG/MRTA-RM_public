@@ -1,0 +1,13 @@
+# Requirements for MRTA-RM
+# Python 3.11+ is recommended
+
+numpy>=1.26.4
+scipy>=1.11.4
+networkx>=3.2.1
+shapely>=2.0.5
+matplotlib>=3.8.4
+tqdm>=4.64
+PyYAML>=6.0
+
+# If installation fails on Apple Silicon or Linux without wheels,
+# try pinning to platform-specific wheel versions or install system GEOS (for Shapely).
