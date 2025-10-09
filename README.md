@@ -4,7 +4,7 @@
 
 > **Seabin Lee, Joonyeol Sim, and Changjoo Nam**,  
 > *"Very Large-scale Multi-Robot Task Allocation in Challenging Environments via Robot Redistribution"*,  
-> Robotics and Autonomous Systems (RAS), Dec 2025. 🔗 [View Paper](https://authors.elsevier.com/tracking/article/details.do?aid=105126&jid=ROBOT&surname=Nam) 🎬 [Demo Video](https://youtu.be/tSPjUtrzA-I?si=UIpyX2zHNFKPx2aw)  
+> Robotics and Autonomous Systems (RAS), Dec 2025. 🔗 [View Paper (PDF)](paper/MRTA_RM.pdf) 🎬 [Demo Video](https://youtu.be/tSPjUtrzA-I?si=UIpyX2zHNFKPx2aw)  
 > *If you use this code in academic work, please cite the paper above.*
 
 > Visibility-based roadmap + section-level allocation for scalable multi-robot task assignment.  
@@ -13,6 +13,27 @@
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
+
+## Experiment Preview
+
+<details>
+  <summary><strong>Click to expand: Environments & Results (full / mini)</strong></summary>
+
+  <!-- Environments -->
+  <h4>Environments</h4>
+  <p align="center">
+    <img src="exp/full_env.png" alt="Full environment" width="48%">
+    <img src="exp/mini_env.png" alt="Mini environment" width="48%">
+  </p>
+
+  <!-- Results -->
+  <h4>Results</h4>
+  <p align="center">
+    <img src="exp/full_exp_results.png" alt="Full environment — experimental results" width="48%">
+    <img src="exp/mini_exp_results.png" alt="Mini environment — experimental results" width="48%">
+  </p>
+
+</details>
 
 ---
 
