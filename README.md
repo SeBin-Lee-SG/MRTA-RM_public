@@ -22,15 +22,15 @@
   <!-- Environments -->
   <h4>Environments</h4>
   <p align="center">
-    <img src="exp/full_env.png" alt="Full environment" width="48%">
-    <img src="exp/mini_env.png" alt="Mini environment" width="48%">
+    <img src="exp/full_env.png" alt="Full environment" width="98%">
+    <img src="exp/mini_env.png" alt="Mini environment" width="98%">
   </p>
 
   <!-- Results -->
   <h4>Results</h4>
   <p align="center">
-    <img src="exp/full_exp_results.png" alt="Full environment — experimental results" width="48%">
-    <img src="exp/mini_exp_results.png" alt="Mini environment — experimental results" width="48%">
+    <img src="exp/full_exp_results.png" alt="Full environment — experimental results" width="98%">
+    <img src="exp/mini_exp_results.png" alt="Mini environment — experimental results" width="98%">
   </p>
 
 </details>
