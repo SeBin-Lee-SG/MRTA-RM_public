@@ -1,124 +1,117 @@
-# MRTA-RM — Multi-Robot Task Allocation via Robot Redistribution Mechanism
+# MRTA-RM: Multi-Robot Task Allocation via Robot Redistribution Mechanism
 
-> 📄 This repository contains the official code for the following paper:
-
-> **Seabin Lee, Joonyeol Sim, and Changjoo Nam**,  
-> *"Very Large-scale Multi-Robot Task Allocation in Challenging Environments via Robot Redistribution"*,  
-> Robotics and Autonomous Systems (RAS), Dec 2025. 🔗 [View Paper (PDF)](paper/MRTA_RM.pdf) 🎬 [Demo Video](https://youtu.be/tSPjUtrzA-I?si=UIpyX2zHNFKPx2aw)  
+> **Seabin Lee, Joonyeol Sim, and Changjoo Nam**,
+> *"Very Large-scale Multi-Robot Task Allocation in Challenging Environments via Robot Redistribution"*,
+> Robotics and Autonomous Systems (RAS), Dec 2025.
+> [Paper (PDF)](paper/MRTA_RM.pdf) | [Demo Video](https://youtu.be/tSPjUtrzA-I?si=UIpyX2zHNFKPx2aw)
 > *If you use this code in academic work, please cite the paper above.*
-
-> Visibility-based roadmap + section-level allocation for scalable multi-robot task assignment.  
-> Cleanly refactored modules, file-based map I/O (JSON/YAML), and reproducible runs.
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-![Status](https://img.shields.io/badge/status-active-brightgreen)
+
+Visibility-based roadmap + section-level allocation for scalable multi-robot task assignment.
+
+---
 
 ## Experiment Preview
 
 <details>
   <summary><strong>Click to expand: Environments & Results (full / mini)</strong></summary>
 
-  <!-- Environments -->
   <h4>Environments</h4>
   <p align="center">
-<img src="exp/mini_env.png" alt="Mini environment" width="98%">    
-<img src="exp/full_env.png" alt="Full environment" width="98%">
+    <img src="exp/mini_env.png" alt="Mini environment" width="98%">
+    <img src="exp/full_env.png" alt="Full environment" width="98%">
   </p>
 
-  <!-- Results -->
   <h4>Results</h4>
   <p align="center">
-<img src="exp/mini_exp_results.png" alt="Mini environment — experimental results" width="98%">    
-<img src="exp/full_exp_results.png" alt="Full environment — experimental results" width="98%">
+    <img src="exp/mini_exp_results.png" alt="Mini environment results" width="98%">
+    <img src="exp/full_exp_results.png" alt="Full environment results" width="98%">
   </p>
 
 </details>
 
 ---
 
-## Table of Contents
-- [Highlights](#highlights)
-- [Project Structure](#project-structure)
-- [Installation](#installation)
-- [Quickstart](#quickstart)
-- [Map Files (JSON/YAML)](#map-files-jsonyaml)
-- [Reproducibility](#reproducibility)
-- [How It Works (Pipeline)](#how-it-works-pipeline)
-- [Configuration Notes](#configuration-notes)
-- [Results & Outputs](#results--outputs)
-- [Paper](#paper)
-- [Contributing](#contributing)
-- [License](#license)
-
----
-
-## Highlights
-- **Clear pipeline**: `GVD → Env → Initial allocation → Transfer analysis → Final allocation`
-- **File-based maps**: drop `.json` / `.yaml` under `maps/` to define obstacles (`polygons`)
-- **Reproducible**: one-line seed setting for fixed robot/goal placements
-- **Modular**: each stage is its own module with typed interfaces & docstrings
-- **Cleaner internals**: no wildcard imports, safer defaults, dataclass models
-
----
-
 ## Project Structure
+
 ```
 .
-├─ main.py
-├─ src/
-│  ├─ GVD_generator.py          # Visibility-based roadmap (VBRM)
-│  ├─ env_generator.py          # Robot/goal placement, graph augmentation
-│  ├─ initial_allocator.py      # InitialAllocator (in-section balance + coarse graph)
-│  ├─ transfer_planner.py       # TransferPlanner (section-to-section transfer analysis)
-│  └─ final_allocator.py        # FinalAllocator (receive/transfer + final matching)
-├─ func/
-│  ├─ func.py                   # geometry, path utils, helpers
-│  └─ my_class.py               # dataclasses for robots/sections/sets
-├─ maps/                        # (optional) JSON/YAML map files
-└─ requirements.txt
+├── main.py                       # Entry point & MRTA_RM class
+├── src/
+│   ├── GVD_generator.py          # Visibility-based roadmap (VBRM)
+│   ├── env_generator.py          # Robot/goal placement & graph augmentation
+│   ├── initial_allocator.py      # Section-level balancing + Dijkstra-Hungarian
+│   ├── transfer_planner.py       # Section-to-section transfer analysis
+│   └── final_allocator.py        # Robot redistribution & final matching
+├── func/
+│   ├── func.py                   # Geometry & path utilities
+│   ├── my_class.py               # Data classes (robots, sections, allocations)
+│   └── my_map.py                 # Map loader (reads JSON from maps/)
+├── maps/                         # JSON map files (obstacle polygons)
+│   ├── demo.json
+│   ├── random.json
+│   ├── random_mini.json
+│   ├── department_store.json
+│   ├── department_store_mini.json
+│   ├── warehouse.json
+│   └── warehouse_mini.json
+├── output/                       # Allocation results (auto-generated)
+└── requirements.txt
 ```
 
 ---
 
 ## Installation
-```bash
-# 1) Create & activate a virtual environment (recommended)
-python -m venv .venv
-# macOS/Linux
-source .venv/bin/activate
-# Windows
-# .venv\Scripts\activate
 
-# 2) Install dependencies
+```bash
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
-
-> Typical deps: `numpy`, `scipy`, `networkx`, `shapely`, `matplotlib`, `tqdm`, `pyyaml`.
 
 ---
 
 ## Quickstart
+
 ```bash
-# (Optional) Put a map file under ./maps
 python main.py
 ```
 
-If your `main.py` exposes CLI flags:
-```bash
-python main.py --test_set 4 --robots 32 --mapw 200 --maph 200 --robot_size 8
+Edit `main.py` to change the map and number of robots:
+
+```python
+app = MRTA_RM(test_set=4, robot_num=10)
+app.run(show_roadmap=True, show_result=True)
 ```
 
 ---
 
-## Map Files (JSON/YAML)
+## Available Maps
 
-Place a file in `maps/` named like `4.json`, `4.yaml`, or a friendly alias (e.g., `warehouse_mini.yaml`).  
-Both of the following are accepted.
+| `test_set` | Map name | Size | Max robots |
+|------------|----------|------|------------|
+| 1 | `random` | 1000 x 1000 | 2000 |
+| 2 | `department_store` | 1760 x 900 | 1343 |
+| 3 | `warehouse` | 2000 x 880 | 2288 |
+| 4 | `demo` | 200 x 200 | 64 |
+| 11 | `random_mini` | 640 x 640 | 826 |
+| 22 | `department_store_mini` | 640 x 640 | 442 |
+| 33 | `warehouse_mini` | 640 x 640 | 496 |
 
-**JSON**
+---
+
+## Custom Maps
+
+Place a JSON file in `maps/` with this format:
+
 ```json
 {
+  "map_width": 200,
+  "map_height": 200,
+  "max_robots": 64,
+  "robot_size": 8,
   "polygons": [
     [[20,20],[20,60],[60,60],[60,20]],
     [[80,20],[80,60],[120,60],[120,20]]
@@ -126,66 +119,50 @@ Both of the following are accepted.
 }
 ```
 
-**YAML**
-```yaml
-polygons:
-  - [[0,20],[40,20],[40,100],[0,100]]
-  - [[60,20],[100,20],[100,100],[60,100]]
+Then use the filename (without `.json`) as `test_set`:
+
+```python
+app = MRTA_RM(test_set="my_custom_map", robot_num=10)
 ```
 
-- Coordinates can be clockwise or counter-clockwise.  
-- First/last point duplication is not required (handled in code).  
-- If no file is found, the code falls back to legacy `func.my_map.return_map(test_set)`.
+---
+
+## Pipeline
+
+1. **Roadmap (VBRM)** -- Sample obstacle boundaries, build Voronoi diagram, extract valid vertices/edges, create uniform graph partitioned into sections.
+2. **Environment** -- Place robots/goals randomly (collision-aware), connect each to its nearest valid graph vertex.
+3. **Initial allocation** -- Balance within sections; build coarse section graph; Dijkstra + Hungarian to compute section-level transfer sequences.
+4. **Transfer analysis** -- Count section-to-section flows; classify sections into 4 cases by transfer/receive patterns.
+5. **Final allocation** -- Redistribute robots between sections; produce final (robot, goal) pairs.
+
+---
+
+## Output
+
+Each run saves a JSON file in `output/` containing:
+- Final (robot_index, goal_index) allocation pairs
+- Per-robot waypoints
+- Robot start/goal positions
+- Total cost, timing information
+- Obstacle polygons
 
 ---
 
 ## Reproducibility
-Fix robot/goal placements generated in `env_generator.py` by seeding NumPy (and optionally `random`) **before** environment creation:
+
+Fix robot/goal placements by seeding before running:
+
 ```python
-# main.py
 import random, numpy as np
 random.seed(0)
 np.random.seed(0)
+
+app = MRTA_RM(test_set=4, robot_num=10)
+app.run()
 ```
-If supported:
-```python
-self.env = env(..., seed=0)
-```
-
----
-
-## How It Works (Pipeline)
-1. **Roadmap (`VBRM`)** — sample boundaries/obstacles → Voronoi → valid vertices/edges → uniform graph & sections.  
-2. **Environment (`env`)** — place robots/goals (collision-aware), connect `R{i}/G{i}` to nearest valid vertices.  
-3. **Initial allocation** — balance within sections; build coarse **section graph**; Dijkstra → Hungarian → section sequences.  
-4. **Transfer analysis** — count section-to-section flows; classify sections (case1~4); stabilize ordering.  
-5. **Final allocation** — receive/transfer robots between sections; stitch per-robot routes; output final pairs.
-
----
-
-## Configuration Notes
-- **Map directory**: default `maps/`; pass `maps_dir` to prefer file-based maps.  
-- **Test set**: integer `test_set` selects a map; matching JSON/YAML (e.g., `maps/4.yaml`) is preferred.  
-- **Robot size / spacing**: tune `robot_radius`, `node_interval`, sampling distances to control density.  
-- **Debug/plots**: check `main.py` flags for saving figures/visualizations.
-
----
-
-## Results & Outputs
-Typical run produces:
-- Final **(robot_index, goal_index)** assignments  
-- Per-robot **travel waypoints** and **traveled distances**  
-- (Optional) figures of roadmap and allocations
-
----
-
-
-## Contributing
-- Open issues for bugs/features  
-- Prefer conventional commits; include minimal repros  
-- Run linters/formatters/tests locally before PRs
 
 ---
 
 ## License
-This project is licensed under the **MIT License**.
+
+MIT License

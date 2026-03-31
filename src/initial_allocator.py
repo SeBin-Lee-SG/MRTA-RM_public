@@ -1,196 +1,104 @@
-# src/initial_allocator.py
-from __future__ import annotations
-
-from typing import List, Dict, Tuple, Sequence, Optional
-import time
-
+from scipy.optimize import linear_sum_assignment
+from func.func import calc_path_length, dist, extract_path2section
 import numpy as np
 import networkx as nx
-from scipy.optimize import linear_sum_assignment
-
-# Import only what we use (no wildcard)
-from func.func import dist, calc_path_length, extract_path2section
 
 
-class InitialAllocator:
-    """
-    Initial assignment phase:
-    - Balance robots/goals within sections
-    - Build a coarse "section graph" for remaining (unbalanced) demand
-    - Solve remaining transfers via shortest paths + Hungarian
-    """
+class InitialAllocation:
+    """Performs initial robot-to-goal allocation using section-level balancing
+    followed by Dijkstra-based Hungarian matching on a coarse section graph."""
 
-    # ---------------------------------------------------------------------
-    # Lifecycle
-    # ---------------------------------------------------------------------
-    def __init__(
-        self,
-        graph: nx.Graph,
-        pos_dict: Dict,                       # pos for uniform_G nodes (including 'R{i}', 'G{i}')
-        robot_class_list: Sequence,           # obj_node_class list
-        goal_class_list: Sequence,            # obj_node_class list
-        section_class_list: Sequence,         # section_class list
-        robot_num: int,
-        goal_num: int,
-        uniform_JC_node_list: Sequence[int],
-        uniform_additional_JC_node_list: Sequence[int],
-        full_section_number: int,
-    ) -> None:
-        self.uniform_G: nx.Graph = graph
-        self.uniform_pos_dict: Dict = pos_dict
-        self.robot_class_list = list(robot_class_list)
-        self.goal_class_list = list(goal_class_list)
-        self.section_class_list = list(section_class_list)
-        self.robot_num = int(robot_num)
-        self.goal_num = int(goal_num)
+    def __init__(self, graph, pos_dict, robot_class_list, goal_class_list,
+                 section_class_list, robot_num, goal_num,
+                 uniform_JC_node_list, uniform_additional_JC_node_list,
+                 full_section_number):
+        self.uniform_G = graph
+        self.uniform_pos_dict = pos_dict
+        self.robot_class_list = robot_class_list
+        self.goal_class_list = goal_class_list
+        self.section_class_list = section_class_list
+        self.robot_num = robot_num
+        self.goal_num = goal_num
+        self.uniform_JC_node_list = uniform_JC_node_list
+        self.uniform_additional_JC_node_list = uniform_additional_JC_node_list
+        self.full_section_number = full_section_number
+        self._path_and_length_cache = {}
 
-        self.uniform_JC_node_list = list(uniform_JC_node_list)
-        self.uniform_additional_JC_node_list = list(uniform_additional_JC_node_list)
-        self.full_section_number = int(full_section_number)
+    def dist_for_simple_astar(self, a, b):
+        return dist(a, b, self.simple_G_pos_dict)
 
-        # Simple-graph (section graph) built on-demand
-        self.simple_G: Optional[nx.Graph] = None
-        self.simple_G_pos_dict: Dict = {}
-
-        # Remaining demand holders after in-section balancing
-        self.remain_robot_list: List = []
-        self.remain_goal_list: List = []
-
-        # Cache for path queries (A* not used by default, but keep cache)
-        self._path_and_length_cache: Dict[Tuple, Tuple[List, float]] = {}
-
-        # Timing
-        self.time_for_cost_matrix: float = 0.0
-
-    # ---------------------------------------------------------------------
-    # Phase 1: balance within sections
-    # ---------------------------------------------------------------------
-    def allocate_within_sections(self) -> None:
-        """
-        Compute remaining deficits/excess per section.
-        Sets:
-          section.remain_robot_num, section.remain_goal_num
-        """
+    def allocate_within_sections(self):
+        """Count surplus robots/goals in each section."""
+        self.remain_robot_list = []
+        self.remain_goal_list = []
         for section in self.section_class_list:
-            # ensure fields exist (avoid stale values)
-            section.remain_robot_num = 0
-            section.remain_goal_num = 0
-
             if section.robot_num > section.goal_num:
                 section.remain_robot_num = section.robot_num - section.goal_num
             elif section.robot_num < section.goal_num:
                 section.remain_goal_num = section.goal_num - section.robot_num
-            # equal -> both remain_* stay 0
 
-    # ---------------------------------------------------------------------
-    # Phase 2: build a coarse "section graph" for remaining demand
-    # ---------------------------------------------------------------------
-    def make_simple_graph(self) -> None:
-        """
-        Build a graph with:
-          - One Steiner-like node 'S{k}' per section (0..full_section_number)
-          - Edges: (start -- S{k}) and (end -- S{k}) with weight = section.length / 2
-          - JC-only sections (after full_section_number) use their start node directly
-        Populate:
-          self.remain_robot_list, self.remain_goal_list with sources/targets in the simple graph.
-        """
+    def make_simple_graph(self):
+        """Build a coarse section graph for cross-section allocation."""
         self.simple_G = nx.Graph()
-        self.simple_G_pos_dict = {}
         self.remain_robot_list = []
         self.remain_goal_list = []
-
-        # For real path distance on simple_G, we need coordinates for start/end/S{k}
-        def _mid(a: List[float], b: List[float]) -> List[float]:
-            return [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0]
-
-        # Regular sections
-        for s_idx, section in enumerate(self.section_class_list[: self.full_section_number + 1]):
-            skey = f"S{s_idx}"
-            # connect endpoints to S
-            self.simple_G.add_edge(section.start, skey, weight=section.length / 2.0)
-            self.simple_G.add_edge(section.end, skey, weight=section.length / 2.0)
-
-            # positions
+        self.simple_G_pos_dict = {}
+        for section in self.section_class_list[:self.full_section_number + 1]:
+            section_label = "S" + str(self.section_class_list.index(section))
+            self.simple_G.add_edge(section.start, section_label, weight=section.length / 2)
+            self.simple_G.add_edge(section.end, section_label, weight=section.length / 2)
             self.simple_G_pos_dict[section.start] = self.uniform_pos_dict[section.start]
             self.simple_G_pos_dict[section.end] = self.uniform_pos_dict[section.end]
-            self.simple_G_pos_dict[skey] = _mid(
-                self.uniform_pos_dict[section.start],
-                self.uniform_pos_dict[section.end],
-            )
+            self.simple_G_pos_dict[section_label] = [
+                (self.uniform_pos_dict[section.start][0] + self.uniform_pos_dict[section.end][0]) / 2,
+                (self.uniform_pos_dict[section.start][1] + self.uniform_pos_dict[section.end][1]) / 2,
+            ]
+            for _ in range(section.remain_robot_num):
+                self.remain_robot_list.append(section_label)
+            for _ in range(section.remain_goal_num):
+                self.remain_goal_list.append(section_label)
 
-            # remaining demand mapped to S
-            for _ in range(getattr(section, "remain_robot_num", 0)):
-                self.remain_robot_list.append(skey)
-            for _ in range(getattr(section, "remain_goal_num", 0)):
-                self.remain_goal_list.append(skey)
-
-        # JC-only sections
-        for section in self.section_class_list[self.full_section_number + 1 :]:
-            for _ in range(getattr(section, "remain_robot_num", 0)):
+        for section in self.section_class_list[self.full_section_number + 1:]:
+            for _ in range(section.remain_robot_num):
                 self.remain_robot_list.append(section.start)
-            for _ in range(getattr(section, "remain_goal_num", 0)):
+            for _ in range(section.remain_goal_num):
                 self.remain_goal_list.append(section.start)
 
-    # ---------------------------------------------------------------------
-    # Phase 3: solve remaining via shortest paths + Hungarian
-    # ---------------------------------------------------------------------
-    def _hungarian_from_costs(self, cost_rows: List[List[float]]) -> List[Tuple[int, int]]:
-        """Return list of (row, col) indices selected by Hungarian."""
-        cost_mat = np.array(cost_rows, dtype=float)
-        cost_mat[~np.isfinite(cost_mat)] = 1e10  # large but not inf
-        row_ind, col_ind = linear_sum_assignment(cost_mat)
-        return list(zip(row_ind.tolist(), col_ind.tolist()))
-
-    def allocate_remaining_dijkstra(self) -> List[List[int]]:
-        """
-        Use single-source Dijkstra on the simple graph from each remaining source to all targets.
-        Then solve the assignment with Hungarian. Finally, convert paths to section sequences.
-        Returns: list of section-id sequences (for Arbiter).
-        """
-        if not self.remain_robot_list:
+    def allocate_remaining(self):
+        """Allocate remaining robots via Dijkstra + Hungarian on the section graph."""
+        if len(self.remain_robot_list) == 0:
             return []
 
-        all_cost_rows: List[List[float]] = []
-        all_path_rows: List[List[List]] = []
+        all_cost_list = []
+        all_path_list = []
 
-        # For each remaining robot source, get shortest paths to all goal sinks
-        for src in self.remain_robot_list:
-            length_dict, path_dict = nx.single_source_dijkstra(self.simple_G, src)
-
-            row_costs: List[float] = []
-            row_paths: List[List] = []
-            for tgt in self.remain_goal_list:
-                if tgt in path_dict:
-                    row_costs.append(length_dict[tgt])
-                    row_paths.append(path_dict[tgt])
+        for robot in self.remain_robot_list:
+            length_dict, path_dict = nx.single_source_dijkstra(self.simple_G, robot)
+            cost_list = []
+            path_list = []
+            for gp in self.remain_goal_list:
+                if gp in path_dict:
+                    cost_list.append(length_dict[gp])
+                    path_list.append(path_dict[gp])
                 else:
-                    row_costs.append(float("inf"))
-                    row_paths.append([])
+                    cost_list.append(float('inf'))
+                    path_list.append([])
+            all_cost_list.append(cost_list)
+            all_path_list.append(path_list)
 
-            all_cost_rows.append(row_costs)
-            all_path_rows.append(row_paths)
+        path_dist_matrix = np.array(all_cost_list)
+        row_ind, col_ind = linear_sum_assignment(path_dist_matrix)
 
-        # Hungarian on the cost matrix
-        matching = self._hungarian_from_costs(all_cost_rows)
-
-        # Convert the chosen simple-graph paths into "section sequences"
         JC_nodes = self.uniform_JC_node_list + self.uniform_additional_JC_node_list
-        result: List[List[int]] = []
-        for r, c in matching:
-            result.append(
-                extract_path2section(all_path_rows[r][c], JC_nodes, self.full_section_number)
-            )
-        return result
+        return [
+            extract_path2section(all_path_list[row][col], JC_nodes, self.full_section_number)
+            for row, col in zip(row_ind, col_ind)
+        ]
 
-    # ----- Public surface -------------------------------------------------
-    def allocation(self) -> List[List[int]]:
-        """Convenience: run the full initial allocation pipeline and return section sequences."""
+    def allocation(self):
         self.allocate_within_sections()
         self.make_simple_graph()
-        return self.allocate_remaining_dijkstra()
+        return self.allocate_remaining()
 
-    # ---------------------------------------------------------------------
     def on_init(self):
-        """Back-compat: same as allocation()."""
         return self.allocation()
-
