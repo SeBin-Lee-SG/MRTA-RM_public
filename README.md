@@ -166,6 +166,35 @@ app.run()
 
 ---
 
+## Numba Acceleration (numba branch)
+
+The [`numba`](../../tree/numba) branch applies [Numba](https://numba.pydata.org/) JIT compilation to speed up distance computations and boundary sampling. The allocation result (cost) is identical to the pure Python version.
+
+**What's optimized:**
+- `euclidean_distance` and batch distance computations (`@nb.njit`)
+- Boundary sampling loop in roadmap generation (triple nested loop -> JIT-compiled)
+- Nearest vertex search in environment setup (vectorized batch distance)
+
+**Benchmark: `department_store` map, 300 robots, 10 random seeds**
+
+| Metric | `main` (pure Python) | `numba` (JIT) | Speedup |
+|--------|---------------------|---------------|---------|
+| Allocation time (avg) | 1.113 s | 0.145 s | **7.7x** |
+| Allocation time (std) | 0.021 s | 0.013 s | - |
+| Roadmap generation | 1.358 s | 1.320 s | ~1.0x |
+| Total cost (avg) | 29301 | 29300 | identical |
+
+> Roadmap generation relies on Shapely/Voronoi (external C libraries), so Numba provides minimal gain there. The main speedup is in the allocation pipeline (environment setup + initial/final allocation), where Python-level distance calculations dominate.
+
+To use the Numba version:
+```bash
+git checkout numba
+pip install -r requirements.txt   # includes numba>=0.58
+python main.py
+```
+
+---
+
 ## License
 
 MIT License
