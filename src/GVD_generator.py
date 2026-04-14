@@ -6,6 +6,7 @@ import time
 import numpy as np
 from func.my_class import section_class, temp_section_class
 from func.func import euclidean_distance, dist, a_sub_b
+from func.numba_utils import sample_boundary_edges, find_uniform_node_indices
 from func.my_map import load_map
 from collections import deque
 
@@ -59,17 +60,10 @@ class VBRM:
     def _sample_boundary(self, vertex_list, boundary_sample):
         for poly in vertex_list:
             poly.append(poly[0])
-        for poly in range(0, len(vertex_list)):
-            for edge in range(0, len(vertex_list[poly]) - 1):
-                edge_len = euclidean_distance(vertex_list[poly][edge], vertex_list[poly][edge + 1])
-                how_many_sample = int(edge_len / self.sampling_dist) + 1
-                for i in range(0, how_many_sample):
-                    boundary_sample.append((
-                        vertex_list[poly][edge][0] + (
-                                vertex_list[poly][edge + 1][0] - vertex_list[poly][edge][0]) * i / how_many_sample,
-                        vertex_list[poly][edge][1] + (
-                                vertex_list[poly][edge + 1][1] - vertex_list[poly][edge][1]) * i / how_many_sample
-                    ))
+        for poly in vertex_list:
+            verts = np.array(poly, dtype=np.float64)
+            samples = sample_boundary_edges(verts, self.sampling_dist)
+            boundary_sample.extend([(s[0], s[1]) for s in samples])
 
     def sampling_boundary(self):
         self.bounding_box = [(0, 0), (0, self.maph), (self.mapw, self.maph), (self.mapw, 0)]
@@ -296,12 +290,9 @@ class VBRM:
                 how_many_node = int(section_length / (2 * NODE_INTERVAL * self.robot_radius)) + 1
                 uniform_dist = section_length / how_many_node
                 how_many_node -= 1
-                ind = []
-                for i in range(how_many_node):
-                    for j in range(len(accumulate_length_list)):
-                        if accumulate_length_list[j] >= uniform_dist * (i + 1):
-                            ind.append(j)
-                            break
+                ind = list(find_uniform_node_indices(
+                    np.array(accumulate_length_list, dtype=np.float64),
+                    how_many_node, uniform_dist))
 
                 section_way_point = [self.base_to_uniform_JC_node_dict[way_point[0]]]
 

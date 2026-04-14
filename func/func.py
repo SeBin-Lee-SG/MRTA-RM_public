@@ -1,18 +1,19 @@
 import numpy as np
 import networkx as nx
-
-
-def euclidean_distance(p1, p2):
-    return np.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
+from func.numba_utils import euclidean_distance_tuple as euclidean_distance
 
 
 def dist(a, b, pos_dict):
-    return euclidean_distance(pos_dict[a], pos_dict[b])
+    return euclidean_distance(
+        np.array(pos_dict[a], dtype=np.float64),
+        np.array(pos_dict[b], dtype=np.float64),
+    )
 
 
 def a_sub_b(a, b):
     """Return elements in list a that are not in list b."""
-    return [x for x in a if x not in b]
+    b_set = set(b)
+    return [x for x in a if x not in b_set]
 
 
 def list_summation(l):

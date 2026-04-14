@@ -6,6 +6,7 @@ import numpy as np
 
 from func.my_class import obj_node_class
 from func.func import euclidean_distance, dist
+from func.numba_utils import batch_distances_from_point
 
 
 class env:
@@ -55,7 +56,11 @@ class env:
         return any(poly.intersects(point_buf) for poly in self.polygon_list)
 
     def _too_close_to_existing(self, pos, existing_positions, min_dist):
-        return any(euclidean_distance(pos, p) < min_dist for p in existing_positions)
+        if not existing_positions:
+            return False
+        targets = np.array(existing_positions, dtype=np.float64)
+        dists = batch_distances_from_point(float(pos[0]), float(pos[1]), targets)
+        return bool(np.any(dists < min_dist))
 
     def set_sp_gp(self):
         """Generate start/goal positions if not already provided."""
@@ -112,23 +117,23 @@ class env:
         return prefix + str(index)
 
     def process_class_list(self, class_list, prefix, valid_vertex_list):
-        for entity_class in class_list:
-            key_distance_list = [
-                (vertex, dist(self.generate_key(prefix, class_list.index(entity_class)),
-                              vertex, self.uniform_pos_dict))
-                for vertex in valid_vertex_list
-            ]
-            sorted_key_distance_list = sorted(key_distance_list, key=lambda x: x[1])
-            sorted_keys = [item[0] for item in sorted_key_distance_list]
-            sorted_distances = [item[1] for item in sorted_key_distance_list]
+        # Pre-build target position array for batch distance computation
+        target_positions = np.array(
+            [self.uniform_pos_dict[v] for v in valid_vertex_list], dtype=np.float64)
 
-            for i in range(len(sorted_keys)):
-                if self.check_intersection(
-                    sorted_keys[i], class_list.index(entity_class),
-                    prefix == "R", prefix == "G"):
+        for idx, entity_class in enumerate(class_list):
+            key = self.generate_key(prefix, idx)
+            entity_pos = np.array(self.uniform_pos_dict[key], dtype=np.float64)
+            distances = batch_distances_from_point(
+                entity_pos[0], entity_pos[1], target_positions)
+            sorted_indices = np.argsort(distances)
+
+            for i in sorted_indices:
+                vertex = valid_vertex_list[i]
+                if self.check_intersection(vertex, idx, prefix == "R", prefix == "G"):
                     continue
-                entity_class.dist_to_valid_vertex = sorted_distances[i]
-                entity_class.nearest_valid_vertex = sorted_keys[i]
+                entity_class.dist_to_valid_vertex = float(distances[i])
+                entity_class.nearest_valid_vertex = vertex
                 break
 
     def check_intersection(self, node_index, obj_index, robot, goal):

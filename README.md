@@ -11,6 +11,8 @@
 
 Visibility-based roadmap + section-level allocation for scalable multi-robot task assignment.
 
+> **Branches:** `main` = pure Python/NumPy, [`numba`](../../tree/numba) = Numba JIT-accelerated version
+
 ---
 
 ## Experiment Preview
@@ -47,6 +49,7 @@ Visibility-based roadmap + section-level allocation for scalable multi-robot tas
 │   └── final_allocator.py        # Robot redistribution & final matching
 ├── func/
 │   ├── func.py                   # Geometry & path utilities
+│   ├── numba_utils.py            # Numba JIT-compiled functions (numba branch)
 │   ├── my_class.py               # Data classes (robots, sections, allocations)
 │   └── my_map.py                 # Map loader (reads JSON from maps/)
 ├── maps/                         # JSON map files (obstacle polygons)
